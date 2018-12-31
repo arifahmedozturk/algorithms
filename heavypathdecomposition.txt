@@ -1,0 +1,121 @@
+//given a tree with N vertices where each vertex has a value, solve the following M operations of two types:
+//type 0: change the value of vertex x to y
+//type 1: find the vertex with the maximum value in the chain connecting vertices x and y
+//the problem is solved by using heavy path decomposition and a segment tree on each chain
+//the complexity is O(M*logN*logN), as there are M operations, a query on a segment tree takes O(logN) time and heavy path decomposition assures that between any two vertices
+//the path goes through at most O(logN) chains
+#include <cstdio>
+#include <vector>
+#define pb push_back
+using namespace std;
+const int nmax=100023;
+int n,m;
+vector<int>adj[nmax],segmentTree[nmax];
+int val[nmax],fre;
+int weight[nmax],sze[nmax],chain[nmax],dad[nmax],root[nmax],level_of_vertex[nmax],place_in_chain[nmax];
+bool vis[nmax];
+void dfs(int nod,int level_of_vertexel)
+{//dfs that calculates the weight of each vertex, its direct ancestor, the level of the vertex and the chain it is part of
+    level_of_vertex[nod]=level_of_vertexel;
+    weight[nod]=1;
+    vis[nod]=1;
+    vector<int>::iterator it;
+    int maxim=0,which=0;
+    for(it=adj[nod].begin();it!=adj[nod].end();++it)
+    {
+        if(vis[*it]) continue;
+        dad[*it]=nod;
+        dfs(*it,level_of_vertexel+1);
+        weight[nod]+=weight[*it];
+        if(maxim<weight[*it])
+        {
+            maxim=weight[*it];
+            which=*it;
+        }
+    }
+    if(maxim==0)
+    {
+        chain[nod]=++fre;
+        sze[chain[nod]]=1;
+        place_in_chain[nod]=1;
+        root[chain[nod]]=nod;
+        return;
+    }
+    chain[nod]=chain[which];
+    sze[chain[nod]]++;
+    place_in_chain[nod]=place_in_chain[which]+1;
+    root[chain[nod]]=nod;
+}
+void update(int pre,int st,int dr,int nod,int pos)//update operation for the segment tree
+{
+    if(st==dr) segmentTree[pre][nod]=val[pos];
+    else
+    {
+        int mij=(st+dr)/2;
+        if(place_in_chain[pos]<=mij) update(pre,st,mij,2*nod,pos);
+        else update(pre,mij+1,dr,2*nod+1,pos);
+        segmentTree[pre][nod]=max(segmentTree[pre][2*nod],segmentTree[pre][2*nod+1]);
+    }
+}
+int query(int pre,int st,int dr,int p1,int p2,int nod)//query operation for the segment tree
+{
+    if(st==p1&&p2==dr) return segmentTree[pre][nod];
+    else
+    {
+        int mij=(st+dr)/2;
+        if(p2<=mij) return query(pre,st,mij,p1,p2,2*nod);
+        else if(p1>mij) return query(pre,mij+1,dr,p1,p2,2*nod+1);
+        return max(query(pre,st,mij,p1,mij,2*nod),query(pre,mij+1,dr,mij+1,p2,2*nod+1));
+    }
+}
+int main()
+{
+    freopen ("heavypath.in","r",stdin);
+    freopen ("heavypath.out","w",stdout);
+    scanf("%d%d",&n,&m);
+    for(int i=1;i<=n;i++) scanf("%d",&val[i]);//array used to store values of vertices
+    for(int i=1;i<n;i++)
+    {
+        int a,b;
+        scanf("%d%d",&a,&b);//edge between a and b
+        adj[a].pb(b);
+        adj[b].pb(a);
+    }
+    dfs(1,1);
+    for(int i=1;i<=fre;i++) segmentTree[i].resize(sze[i]*4);//creating the segment trees
+    for(int i=1;i<=n;i++)
+    {
+        update(chain[i],1,sze[chain[i]],1,i);//inserting the initial values in the segment tree
+    }
+    for(int i=1;i<=m;i++)
+    {
+        int a,b,c;
+        scanf("%d%d%d",&a,&b,&c);
+        if(a==0)//a is 0, operation of type 0 so vertex b gets value c
+        {
+            val[b]=c;
+            update(chain[b],1,sze[chain[b]],1,b);
+        }
+        else
+        {//a is 1, operation of type 1 so I must answer the query for (b,c)
+            int nb=level_of_vertex[b],nc=level_of_vertex[c],answerOfQuery=0;//each step we take the vertex whose chain ends at a higher level and we go up until both vertices are part
+	    //of the same chain
+            while(1)
+            {
+                if(chain[b]==chain[c])
+                {
+                    int p1=place_in_chain[b],p2=place_in_chain[c];
+                    answerOfQuery=max(query(chain[b],1,sze[chain[b]],min(p1,p2),max(p1,p2),1),rasp);
+                    break;
+                }
+                else
+                {
+                    if(level_of_vertex[root[chain[b]]]<level_of_vertex[root[chain[c]]]) swap(b,c);
+                    answerOfQuery=max(query(chain[b],1,sze[chain[b]],place_in_chain[b],place_in_chain[root[chain[b]]],1),rasp);
+                    b=dad[root[chain[b]]];
+                }
+            }
+            printf("%d\n",rasp);
+        }
+    }
+}

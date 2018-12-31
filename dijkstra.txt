@@ -1,0 +1,125 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#define LIM 50023
+using namespace std;
+struct heap
+{
+    int nod;
+    int val;
+}a[LIM];
+vector<int>adj[LIM],cst[LIM];
+int where[LIM],nt,n,m,minim[LIM];
+int left(int x)
+{
+    return 2*x;
+}
+int right(int x)
+{
+    return 2*x+1;
+}
+int father_of(int x)
+{
+    return x/2;
+}
+void checkup(int pos)
+{
+    while(1)
+    {
+        int t=father_of(pos);
+        if(t==0) return;
+        if(a[t].val>a[pos].val)
+        {
+            swap(a[t].nod,a[pos].nod);
+            swap(a[t].val,a[pos].val);
+            swap(where[a[t].nod],where[a[pos].nod]);
+            pos=t;
+        }
+        else return;
+    }
+}
+void checkdown(int pos)
+{
+    while(1)
+    {
+        int mini=a[pos].val,caz=0;
+        int s=left(pos);
+        if(s<=nt&&mini>a[s].val)
+        {
+            mini=a[s].val;
+            caz=1;
+        }
+        int dr=right(pos);
+        if(dr<=nt&&mini>a[dr].val)
+        {
+            mini=a[dr].val;
+            caz=2;
+        }
+        if(caz==0) break;
+        else if(caz==1)
+        {
+            swap(a[s].nod,a[pos].nod);
+            swap(a[s].val,a[pos].val);
+            swap(where[a[s].nod],where[a[pos].nod]);
+            pos=s;
+        }
+        else
+        {
+            swap(a[dr].nod,a[pos].nod);
+            swap(a[dr].val,a[pos].val);
+            swap(where[a[dr].nod],where[a[pos].nod]);
+            pos=dr;
+        }
+    }
+}
+void rem()
+{
+    swap(a[1].nod,a[nt].nod);
+    swap(a[1].val,a[nt].val);
+    swap(where[a[1].nod],where[a[nt].nod]);
+    nt--;
+    checkdown(1);
+}
+ 
+int main()
+{
+    freopen ("dijkstra.in","r",stdin);
+    freopen ("dijkstra.out","w",stdout);
+    int n,m;
+    scanf("%d%d",&n,&m);
+    for(int i=1;i<=n;i++) minim[i]=1000000000;
+    int a1,a2,a3;//edge from a1 to a2 with cost a3
+    for(int i=1;i<=m;i++)
+    {
+        scanf("%d%d%d",&a1,&a2,&a3);
+        adj[a1].push_back(a2);
+        cst[a1].push_back(a3);
+    }
+    minim[1]=0;
+    for(int i=1;i<=n;i++)
+    {
+        nt++;
+        a[i].nod=i;
+        a[i].val=minim[i];
+        where[i]=i;
+        checkup(i);
+    }//add all nodes to heap
+    for(int i=1;i<n;i++)
+    {
+        int cur=a[1].nod;//find vertex with smallest cost in the heap
+        vector<int>::iterator it1,it2;
+        it2=cst[cur].begin();
+        for(it1=adj[cur].begin();it1!=adj[cur].end();++it1)
+        {
+            if(minim[cur]+*it2<minim[*it1])
+            {
+                minim[*it1]=minim[cur]+*it2;
+                a[where[*it1]].val=minim[*it1];
+                checkup(where[*it1]);//update the cost of the node
+            }
+            ++it2;
+        }
+        rem();//remove top vertex in the heap
+    }
+    for(int i=2;i<=n;i++) printf("%d ",minim[i]%1000000000);
+}
